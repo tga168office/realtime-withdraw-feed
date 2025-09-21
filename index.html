@@ -2,32 +2,35 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>รายการถอนล่าสุด (Real-time)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>รายการถอนล่าสุด (Real-time TH)</title>
 <style>
   :root{
-    --bg:#0b0a0f; --card:#1a0f1f; --accent:#ff1e56; --ok:#35d07f; --wait:#ffcc66; --text:#f5f7fa; --muted:#98a1b2;
+    --bg:#0b0a0f; --accent:#ff1e56; --ok:#35d07f; --wait:#ffcc66; --text:#f5f7fa; --muted:#98a1b2;
+    --card1: rgba(255,30,86,.08); --card2: rgba(255,30,86,.02); --border: rgba(255,30,86,.35);
   }
-  html,body{margin:0;background:radial-gradient(1200px 600px at 20% 0%, #251027 0%, #0b0a0f 60%), var(--bg);color:var(--text);font-family:'Kanit',system-ui,Segoe UI,Arial}
-  .wrap{max-width:720px;margin:16px auto;padding:0 14px}
+  html,body{margin:0;background:radial-gradient(1200px 600px at 20% 0%, #251027 0%, #0b0a0f 60%), var(--bg);color:var(--text);font-family:"Kanit",system-ui,Segoe UI,Arial}
+  .wrap{max-width:720px;margin:14px auto;padding:0 12px}
   .title{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(180deg, rgba(255,30,86,.25), rgba(255,30,86,.05));border:2px solid rgba(255,30,86,.55);border-radius:16px;box-shadow:0 0 18px rgba(255,30,86,.25) inset, 0 8px 30px rgba(255,30,86,.15)}
   .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#222;border:1px solid #333;color:var(--muted)}
   ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
-  .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg, rgba(255,30,86,.08), rgba(255,30,86,.02));border:1px solid rgba(255,30,86,.35);box-shadow:0 8px 24px rgba(255,30,86,.12), 0 0 0 1px rgba(255,30,86,.2) inset}
+  .item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg, var(--card1), var(--card2));border:1px solid var(--border);box-shadow:0 8px 24px rgba(255,30,86,.12), 0 0 0 1px rgba(255,30,86,.2) inset}
+  .logo{width:34px;height:34px;border-radius:10px;background:#111;display:grid;place-items:center;overflow:hidden}
+  .logo img{width:100%;height:100%;object-fit:contain}
   .left{display:grid;gap:6px}
   .name{font-weight:700}
   .meta{font-size:12px;color:var(--muted)}
-  .amount{font-weight:800;font-size:18px}
-  .status{font-size:12px;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .amount{font-weight:800;font-size:18px;text-align:right}
+  .status{font-size:12px;text-align:right}
   .ok{color:var(--ok)} .wait{color:var(--wait)}
-  .footer{margin:12px 2px 6px;text-align:right;color:var(--muted);font-size:12px}
+  .footer{margin:10px 2px 6px;text-align:right;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="title">
       <h3 style="margin:0">รายการถอนล่าสุด</h3>
-      <span id="badge" class="badge" style="display:none">DEMO</span>
+      <span class="badge">โซนเวลา: Thailand (UTC+7)</span>
     </div>
     <ul id="list"></ul>
     <div class="footer">
@@ -36,71 +39,103 @@
   </div>
 
 <script>
-/**
- * โหมดการโหลดข้อมูล:
- * - ?src=demo (ค่าเริ่ม) จะอ่านไฟล์ withdrawals.json ใน repo
- * - ?src=https://api.yourdomain.com/withdrawals จะดึงจาก API จริง (ต้องเปิด CORS)
- * - ?limit=20 และ ?interval=5000 ปรับจำนวน/ช่วงอัปเดตได้
- */
-const q = new URLSearchParams(location.search);
-const SRC = q.get('src') || 'demo';
-const LIMIT = Number(q.get('limit') || 20);
-const INTERVAL = Number(q.get('interval') || 5000);
+/* ---------- CONFIG ---------- */
+const BANK_LOGO = {
+  BBL:  "https://img5.pic.in.th/file/secure-sv1/BBLac177c236cbf4fb2.png",
+  GSB:  "https://img2.pic.in.th/pic/GSB25cee300987e8a94.png",
+  KBANK:"https://img5.pic.in.th/file/secure-sv1/KBANK14ef3411180f0964.png",
+  KTB:  "https://img2.pic.in.th/pic/KTB03d591f6d31668d5.png",
+  SCB:  "https://img5.pic.in.th/file/secure-sv1/SCBcfe6b49e706bcaea.png"
+};
+const BANKS = Object.keys(BANK_LOGO);
+const NAMES = ["คริม","Layla","เดียร์","พั้นซ์","บอส","ซาร่า","มิน","จีจี้","นัท","เจน","วิน","คิม","ตาล","ฟ้า","แอม"];
+const BASE_INTERVAL_MS = 2500;   // สุ่มเพิ่มรายการใหม่ทุก ~2.5–4 วินาที
+const MAX_ITEMS = 12;            // แสดงสูงสุดกี่แถว
 
-const THB = n => Number(n).toLocaleString("th-TH", {style:"currency", currency:"THB", maximumFractionDigits:0});
+/* ---------- HELPERS ---------- */
+const THB = n => Number(n).toLocaleString("th-TH", { style:"currency", currency:"THB", maximumFractionDigits:0 });
 const maskPhone = p => String(p||'').replace(/(\d{3})\d+(\d)/, "$1-x-$2");
-const maskName = n => n ? (n.length<=2 ? n[0]+"*" : n[0]+n[1]+"****") : "—";
-const fmt = iso => iso ? new Date(iso).toLocaleString("th-TH") : '';
+const maskName  = n => n ? (n.length<=2 ? n[0]+"*" : n[0]+n[1]+"****") : "—";
 
-const list = document.getElementById("list");
-const badge = document.getElementById("badge");
-const updated = document.getElementById("updated");
+// เวลาโซนไทย (UTC+7) ให้ใช้ timeZone: 'Asia/Bangkok'
+const fmtTH = ts => new Date(ts).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
 
-async function fetchData(){
-  if(SRC === 'demo'){
-    badge.style.display = 'inline-block';
-    const r = await fetch('./withdrawals.json', {cache:'no-store'});
-    const arr = await r.json();
-    return arr.slice(0, LIMIT);
-  }else{
-    const url = new URL(SRC);
-    url.searchParams.set('limit', LIMIT);
-    const r = await fetch(url.toString(), {cache:'no-store'});
-    if(!r.ok) throw new Error('API error');
-    return await r.json();
-  }
-}
+function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function randomPhone(){ return "0"+rand(80,99)+rand(1000000,9999999); }
 
-function render(items){
-  list.innerHTML = items.map(it => `
-    <li class="item">
+/* ---------- STATE ---------- */
+const listEl = document.getElementById("list");
+const updatedEl = document.getElementById("updated");
+let items = [];
+
+/* ---------- RENDER ---------- */
+function render(){
+  listEl.innerHTML = items.map(it => `
+    <li class="item" id="row-${it.id}">
+      <div class="logo"><img src="${BANK_LOGO[it.bank]||''}" alt="${it.bank}"></div>
       <div class="left">
         <div class="name">${maskName(it.name)} <span style="font-weight:400;color:#cbd5e1">(${maskPhone(it.phone)})</span></div>
-        <div class="meta">${fmt(it.paid_at)}</div>
+        <div class="meta">${fmtTH(it.time)}</div>
       </div>
-      <div class="right">
+      <div>
         <div class="amount">${THB(it.amount)}</div>
-        <div class="status ${it.status==='PAID'?'ok':'wait'}">
-          ${it.status==='PAID'?'✓ โอนแล้ว':'⏳ กำลังโอน'}
-        </div>
+        <div class="status ${it.status==='PAID'?'ok':'wait'}">${it.status==='PAID'?'✓ โอนแล้ว':'⏳ กำลังโอน'}</div>
       </div>
     </li>
-  `).join('');
-  updated.textContent = new Date().toLocaleTimeString("th-TH");
+  `).join("");
+  updatedEl.textContent = new Date().toLocaleTimeString("th-TH", { timeZone:"Asia/Bangkok" });
 }
 
-// loop
-async function tick(){
-  try{
-    const data = await fetchData();
-    render(data);
-  }catch(e){
-    console.error(e);
-  }finally{
-    setTimeout(tick, INTERVAL);
-  }
+/* ---------- LOGIC ---------- */
+// สร้างรายการใหม่แบบสุ่ม แล้ว “กำลังโอน” → “โอนแล้ว” หลัง 2.5 วิ
+function pushRandomItem(){
+  const it = {
+    id: cryptoRandomId(),
+    bank: pick(BANKS),
+    name: pick(NAMES),
+    phone: randomPhone(),
+    amount: rand(500, 18000),
+    status: "PENDING",
+    time: Date.now()
+  };
+  items.unshift(it);
+  if(items.length > MAX_ITEMS) items = items.slice(0, MAX_ITEMS);
+  render();
+
+  // flip สถานะหลัง 2.5 วินาที
+  setTimeout(()=>{
+    it.status = "PAID";
+    const row = document.getElementById(`row-${it.id}`);
+    if(row){
+      // อัปเดตเฉพาะ status+class ให้ไว ไม่ต้อง re-render ทั้งหมดก็ได้
+      const statusEl = row.querySelector(".status");
+      statusEl.textContent = "✓ โอนแล้ว";
+      statusEl.classList.remove("wait");
+      statusEl.classList.add("ok");
+    }else{
+      render(); // สำรอง
+    }
+  }, 2500);
 }
-tick();
+
+// วนเพิ่มรายการเรื่อยๆ แบบ interval แอบสุ่มเวลาให้อินทรีย์หน่อย
+function loop(){
+  pushRandomItem();
+  const jitter = rand(0, 1500); // +0-1.5s
+  setTimeout(loop, BASE_INTERVAL_MS + jitter);
+}
+
+/* ---------- UTIL ---------- */
+function cryptoRandomId(){
+  const a = new Uint8Array(8);
+  (crypto || window.crypto || window.msCrypto).getRandomValues(a);
+  return [...a].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* ---------- START ---------- */
+render();
+loop();
 </script>
 </body>
 </html>
