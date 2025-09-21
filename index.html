@@ -9,7 +9,12 @@
     --bg:#0b0a0f; --accent:#ff1e56; --ok:#35d07f; --wait:#ffcc66; --text:#f5f7fa; --muted:#98a1b2;
     --card1: rgba(255,30,86,.08); --card2: rgba(255,30,86,.02); --border: rgba(255,30,86,.35);
   }
-  html,body{margin:0;background:radial-gradient(1200px 600px at 20% 0%, #251027 0%, #0b0a0f 60%), var(--bg);color:var(--text);font-family:"Kanit",system-ui,Segoe UI,Arial}
+  html,body{
+  margin:0;
+  background:radial-gradient(1200px 600px at 20% 0%, #251027 0%, #0b0a0f 60%), var(--bg);
+  color:var(--text);
+  font-family:"Kanit",system-ui,Segoe UI,Arial
+}
   .wrap{max-width:720px;margin:14px auto;padding:0 12px}
   .title{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(180deg, rgba(255,30,86,.25), rgba(255,30,86,.05));border:2px solid rgba(255,30,86,.55);border-radius:16px;box-shadow:0 0 18px rgba(255,30,86,.25) inset, 0 8px 30px rgba(255,30,86,.15)}
   .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#222;border:1px solid #333;color:var(--muted)}
@@ -50,7 +55,7 @@ const BANK_LOGO = {
 const BANKS = Object.keys(BANK_LOGO);
 const NAMES = ["คริม","Layla","เดียร์","พั้นซ์","บอส","ซาร่า","มิน","จีจี้","นัท","เจน","วิน","คิม","ตาล","ฟ้า","แอม"];
 const BASE_INTERVAL_MS = 2500;   // สุ่มเพิ่มรายการใหม่ทุก ~2.5–4 วินาที
-const MAX_ITEMS = 12;            // แสดงสูงสุดกี่แถว
+const MAX_ITEMS = 5;            // แสดงสูงสุดกี่แถว
 
 /* ---------- HELPERS ---------- */
 const THB = n => Number(n).toLocaleString("th-TH", { style:"currency", currency:"THB", maximumFractionDigits:0 });
