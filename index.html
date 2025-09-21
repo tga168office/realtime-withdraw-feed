@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>รายการถอนล่าสุด (Real-time)</title>
+<style>
+  :root{
+    --bg:#0b0a0f; --card:#1a0f1f; --accent:#ff1e56; --ok:#35d07f; --wait:#ffcc66; --text:#f5f7fa; --muted:#98a1b2;
+  }
+  html,body{margin:0;background:radial-gradient(1200px 600px at 20% 0%, #251027 0%, #0b0a0f 60%), var(--bg);color:var(--text);font-family:'Kanit',system-ui,Segoe UI,Arial}
+  .wrap{max-width:720px;margin:16px auto;padding:0 14px}
+  .title{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(180deg, rgba(255,30,86,.25), rgba(255,30,86,.05));border:2px solid rgba(255,30,86,.55);border-radius:16px;box-shadow:0 0 18px rgba(255,30,86,.25) inset, 0 8px 30px rgba(255,30,86,.15)}
+  .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#222;border:1px solid #333;color:var(--muted)}
+  ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+  .item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg, rgba(255,30,86,.08), rgba(255,30,86,.02));border:1px solid rgba(255,30,86,.35);box-shadow:0 8px 24px rgba(255,30,86,.12), 0 0 0 1px rgba(255,30,86,.2) inset}
+  .left{display:grid;gap:6px}
+  .name{font-weight:700}
+  .meta{font-size:12px;color:var(--muted)}
+  .amount{font-weight:800;font-size:18px}
+  .status{font-size:12px;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .ok{color:var(--ok)} .wait{color:var(--wait)}
+  .footer{margin:12px 2px 6px;text-align:right;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <h3 style="margin:0">รายการถอนล่าสุด</h3>
+      <span id="badge" class="badge" style="display:none">DEMO</span>
+    </div>
+    <ul id="list"></ul>
+    <div class="footer">
+      อัปเดตล่าสุด: <span id="updated">—</span>
+    </div>
+  </div>
+
+<script>
+/**
+ * โหมดการโหลดข้อมูล:
+ * - ?src=demo (ค่าเริ่ม) จะอ่านไฟล์ withdrawals.json ใน repo
+ * - ?src=https://api.yourdomain.com/withdrawals จะดึงจาก API จริง (ต้องเปิด CORS)
+ * - ?limit=20 และ ?interval=5000 ปรับจำนวน/ช่วงอัปเดตได้
+ */
+const q = new URLSearchParams(location.search);
+const SRC = q.get('src') || 'demo';
+const LIMIT = Number(q.get('limit') || 20);
+const INTERVAL = Number(q.get('interval') || 5000);
+
+const THB = n => Number(n).toLocaleString("th-TH", {style:"currency", currency:"THB", maximumFractionDigits:0});
+const maskPhone = p => String(p||'').replace(/(\d{3})\d+(\d)/, "$1-x-$2");
+const maskName = n => n ? (n.length<=2 ? n[0]+"*" : n[0]+n[1]+"****") : "—";
+const fmt = iso => iso ? new Date(iso).toLocaleString("th-TH") : '';
+
+const list = document.getElementById("list");
+const badge = document.getElementById("badge");
+const updated = document.getElementById("updated");
+
+async function fetchData(){
+  if(SRC === 'demo'){
+    badge.style.display = 'inline-block';
+    const r = await fetch('./withdrawals.json', {cache:'no-store'});
+    const arr = await r.json();
+    return arr.slice(0, LIMIT);
+  }else{
+    const url = new URL(SRC);
+    url.searchParams.set('limit', LIMIT);
+    const r = await fetch(url.toString(), {cache:'no-store'});
+    if(!r.ok) throw new Error('API error');
+    return await r.json();
+  }
+}
+
+function render(items){
+  list.innerHTML = items.map(it => `
+    <li class="item">
+      <div class="left">
+        <div class="name">${maskName(it.name)} <span style="font-weight:400;color:#cbd5e1">(${maskPhone(it.phone)})</span></div>
+        <div class="meta">${fmt(it.paid_at)}</div>
+      </div>
+      <div class="right">
+        <div class="amount">${THB(it.amount)}</div>
+        <div class="status ${it.status==='PAID'?'ok':'wait'}">
+          ${it.status==='PAID'?'✓ โอนแล้ว':'⏳ กำลังโอน'}
+        </div>
+      </div>
+    </li>
+  `).join('');
+  updated.textContent = new Date().toLocaleTimeString("th-TH");
+}
+
+// loop
+async function tick(){
+  try{
+    const data = await fetchData();
+    render(data);
+  }catch(e){
+    console.error(e);
+  }finally{
+    setTimeout(tick, INTERVAL);
+  }
+}
+tick();
+</script>
+</body>
+</html>
