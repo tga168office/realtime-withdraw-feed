@@ -1,0 +1,8 @@
+[
+  {"id":"w1","bank":"KBank","name":"คริม","phone":"0871234123","amount":1143,"status":"PENDING","paid_at":"2025-09-21T22:56:58Z"},
+  {"id":"w2","bank":"BAY","name":"Layla","phone":"0929876543","amount":13211,"status":"PAID","paid_at":"2025-09-21T22:56:52Z"},
+  {"id":"w3","bank":"SCB","name":"เดียร์","phone":"0861234876","amount":4167,"status":"PAID","paid_at":"2025-09-21T22:56:46Z"},
+  {"id":"w4","bank":"KTB","name":"พั้นซ์","phone":"0881234840","amount":9246,"status":"PAID","paid_at":"2025-09-21T22:56:40Z"},
+  {"id":"w5","bank":"SCB","name":"บอส","phone":"0891234634","amount":2056,"status":"PAID","paid_at":"2025-09-21T22:56:34Z"},
+  {"id":"w6","bank":"KBank","name":"ซาร่า","phone":"0881234982","amount":1836,"status":"PAID","paid_at":"2025-09-21T22:56:28Z"}
+]
