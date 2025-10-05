@@ -3,27 +3,29 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 <title>รายการถอนล่าสุด (Real-time TH)</title>
 <style>
   :root{
-    --bg:#0b0a0f; --accent:#ff1e56; --ok:#35d07f; --wait:#ffcc66; --text:#f5f7fa; --muted:#98a1b2;
-    --card1: rgba(255,30,86,.08); --card2: rgba(255,30,86,.02); --border: rgba(255,30,86,.35);
+    --accent:#ff1e56; --ok:#35d07f; --wait:#ffcc66; --text:#111; --muted:#777;
+    --card1: rgba(255,30,86,.08); --card2: rgba(255,30,86,.02); --border: rgba(255,30,86,.25);
   }
   html,body{
-  margin:0;
-  background:transparent;
-  color:var(--text);
-  font-family:"Kanit",system-ui,Segoe UI,Arial
-}
+    margin:0;
+    background:transparent;
+    color:var(--text);
+    font-family:"Kanit",system-ui,Segoe UI,Arial;
+  }
   .wrap{max-width:720px;margin:14px auto;padding:0 12px}
-  .title{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(180deg, rgba(255,30,86,.25), rgba(255,30,86,.05));border:2px solid rgba(255,30,86,.55);border-radius:16px;box-shadow:0 0 18px rgba(255,30,86,.25) inset, 0 8px 30px rgba(255,30,86,.15)}
-  .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#222;border:1px solid #333;color:var(--muted)}
-  ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
-  .item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg, var(--card1), var(--card2));border:1px solid var(--border);box-shadow:0 8px 24px rgba(255,30,86,.12), 0 0 0 1px rgba(255,30,86,.2) inset}
-  .logo{width:34px;height:34px;border-radius:10px;background:#111;display:grid;place-items:center;overflow:hidden}
+  .title{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:2px solid rgba(255,30,86,.55);border-radius:12px;font-weight:600}
+  .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#eee;border:1px solid #ddd;color:#555}
+  ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+  .item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-radius:14px;background:linear-gradient(180deg,var(--card1),var(--card2));border:1px solid var(--border)}
+  .logo{width:32px;height:32px;border-radius:10px;overflow:hidden}
   .logo img{width:100%;height:100%;object-fit:contain}
-  .left{display:grid;gap:6px}
-  .name{font-weight:700}
+  .left{display:grid;gap:4px}
   .meta{font-size:12px;color:var(--muted)}
   .amount{font-weight:800;font-size:18px;text-align:right}
   .status{font-size:12px;text-align:right}
@@ -34,8 +36,8 @@
 <body>
   <div class="wrap">
     <div class="title">
-      <h3 style="margin:0">รายการถอนล่าสุด</h3>
-      <span class="badge">โซนเวลา: Thailand (UTC+7)</span>
+      <span>รายการถอนล่าสุด</span>
+      <span class="badge">เวลาไทย (UTC+7)</span>
     </div>
     <ul id="list"></ul>
     <div class="footer">
@@ -53,36 +55,53 @@ const BANK_LOGO = {
   SCB:  "https://img5.pic.in.th/file/secure-sv1/SCBcfe6b49e706bcaea.png"
 };
 const BANKS = Object.keys(BANK_LOGO);
-const NAMES = [
-  
-];
-const BASE_INTERVAL_MS = 1500;   // สุ่มเพิ่มรายการใหม่ทุก ~2.5–4 วินาที
-const MAX_ITEMS = 5;            // แสดงสูงสุดกี่แถว
+const BASE_INTERVAL_MS = 1500;
+const MAX_ITEMS = 6;
 
 /* ---------- HELPERS ---------- */
-const THB = n => Number(n).toLocaleString("th-TH", { style:"currency", currency:"THB", maximumFractionDigits:0 });
-const maskPhone = p => String(p||'').replace(/(\d{3})\d+(\d)/, "$1-x-$2");
-const maskName  = n => n ? (n.length<=2 ? n[0]+"*" : n[0]+n[1]+"****") : "—";
+const THB = n => Number(n).toLocaleString("th-TH",{style:"currency",currency:"THB",maximumFractionDigits:0});
+const fmtTH = ts => new Date(ts).toLocaleString("th-TH",{timeZone:"Asia/Bangkok"});
 
-// เวลาโซนไทย (UTC+7) ให้ใช้ timeZone: 'Asia/Bangkok'
-const fmtTH = ts => new Date(ts).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function cryptoId(){
+  const a=new Uint8Array(8);
+  crypto.getRandomValues(a);
+  return [...a].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
 
-function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
-function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
-function randomPhone(){ return "0"+rand(80,99)+rand(1000000,9999999); }
+/* ---------- PHONE GENERATOR ---------- */
+const usedPhones = new Set();
+function randomPhone(){
+  const prefixSets = [
+    rand(90,99),
+    rand(80,89),
+    rand(60,69)
+  ];
+  const prefix = pick(prefixSets);
+  let last4;
+  let phone;
+  do {
+    last4 = rand(0,9999).toString().padStart(4,"0");
+    phone = `0${prefix}-XXX-${last4}`;
+  } while (usedPhones.has(phone));
+  usedPhones.add(phone);
+  if(usedPhones.size > 100) usedPhones.clear(); // reset if too many
+  return phone;
+}
 
 /* ---------- STATE ---------- */
-const listEl = document.getElementById("list");
-const updatedEl = document.getElementById("updated");
-let items = [];
+const listEl=document.getElementById("list");
+const updatedEl=document.getElementById("updated");
+let items=[];
 
 /* ---------- RENDER ---------- */
 function render(){
-  listEl.innerHTML = items.map(it => `
+  listEl.innerHTML = items.map(it=>`
     <li class="item" id="row-${it.id}">
-      <div class="logo"><img src="${BANK_LOGO[it.bank]||''}" alt="${it.bank}"></div>
+      <div class="logo"><img src="${BANK_LOGO[it.bank]}" alt="${it.bank}"></div>
       <div class="left">
-        <div class="name">${maskName(it.name)} <span style="font-weight:400;color:#cbd5e1">(${maskPhone(it.phone)})</span></div>
+        <div class="meta">${it.phone}</div>
         <div class="meta">${fmtTH(it.time)}</div>
       </div>
       <div>
@@ -90,54 +109,37 @@ function render(){
         <div class="status ${it.status==='PAID'?'ok':'wait'}">${it.status==='PAID'?'✓ โอนแล้ว':'⏳ กำลังโอน'}</div>
       </div>
     </li>
-  `).join("");
-  updatedEl.textContent = new Date().toLocaleTimeString("th-TH", { timeZone:"Asia/Bangkok" });
+  `).join('');
+  updatedEl.textContent = new Date().toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok"});
 }
 
 /* ---------- LOGIC ---------- */
-// สร้างรายการใหม่แบบสุ่ม แล้ว “กำลังโอน” → “โอนแล้ว” หลัง 2.5 วิ
 function pushRandomItem(){
-  const it = {
-    id: cryptoRandomId(),
-    bank: pick(BANKS),
-    name: pick(NAMES),
-    phone: randomPhone(),
-    amount: rand(500, 18000),
-    status: "PENDING",
-    time: Date.now()
+  const it={
+    id:cryptoId(),
+    bank:pick(BANKS),
+    phone:randomPhone(),
+    amount:rand(500,18000),
+    status:"PENDING",
+    time:Date.now()
   };
   items.unshift(it);
-  if(items.length > MAX_ITEMS) items = items.slice(0, MAX_ITEMS);
+  if(items.length>MAX_ITEMS) items=items.slice(0,MAX_ITEMS);
   render();
-
-  // flip สถานะหลัง 2.5 วินาที
   setTimeout(()=>{
-    it.status = "PAID";
-    const row = document.getElementById(`row-${it.id}`);
+    it.status="PAID";
+    const row=document.getElementById(`row-${it.id}`);
     if(row){
-      // อัปเดตเฉพาะ status+class ให้ไว ไม่ต้อง re-render ทั้งหมดก็ได้
-      const statusEl = row.querySelector(".status");
-      statusEl.textContent = "✓ โอนแล้ว";
-      statusEl.classList.remove("wait");
-      statusEl.classList.add("ok");
-    }else{
-      render(); // สำรอง
-    }
-  }, 2500);
+      const s=row.querySelector(".status");
+      s.textContent="✓ โอนแล้ว";
+      s.classList.remove("wait");
+      s.classList.add("ok");
+    }else render();
+  },2500);
 }
-
-// วนเพิ่มรายการเรื่อยๆ แบบ interval แอบสุ่มเวลาให้อินทรีย์หน่อย
 function loop(){
   pushRandomItem();
-  const jitter = rand(0, 1500); // +0-1.5s
-  setTimeout(loop, BASE_INTERVAL_MS + jitter);
-}
-
-/* ---------- UTIL ---------- */
-function cryptoRandomId(){
-  const a = new Uint8Array(8);
-  (crypto || window.crypto || window.msCrypto).getRandomValues(a);
-  return [...a].map(b=>b.toString(16).padStart(2,"0")).join("");
+  setTimeout(loop,BASE_INTERVAL_MS+rand(0,1500));
 }
 
 /* ---------- START ---------- */
